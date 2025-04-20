@@ -2,7 +2,6 @@ import asyncio
 import logging
 import re
 import sys
-from typing import Callable, Coroutine, Optional
 
 import toga
 from bleak import BleakClient, BleakError, BleakGATTCharacteristic, BleakScanner
@@ -32,24 +31,24 @@ class BluetoothClient(toga.App):
         self.service_uuid = "000000ff-0000-1000-8000-00805f9b34fb"
         self.char_uuid = "0000ff01-0000-1000-8000-00805f9b34fb"
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
-        self.client: Optional[BleakClient] = None
+        self.client: BleakClient | None = None
         self.target_name: str = "ESP"
         self.esp_ouis: set[str] = esp_ouis
         self.event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
         # UI组件声明
-        self.left_content: Optional[toga.Box] = None
-        self.right_content: Optional[toga.Box] = None
-        self.scan_button: Optional[toga.Button] = None
-        self.connect_button: Optional[toga.Button] = None
-        self.disconnect_button: Optional[toga.Button] = None
-        self.device_table: Optional[toga.Table] = None
-        self.light_row: Optional[toga.Box] = None
-        self.fan_row: Optional[toga.Box] = None
-        self.heater_row: Optional[toga.Box] = None
-        self.device_status: Optional[toga.Box] = None
-        self.split: Optional[toga.SplitContainer] = None
-        self.status_table: Optional[toga.Table] = None
+        self.left_content: toga.Box | None = None
+        self.right_content: toga.Box | None = None
+        self.scan_button: toga.Button | None = None
+        self.connect_button: toga.Button | None = None
+        self.disconnect_button: toga.Button | None = None
+        self.device_table: toga.Table | None = None
+        self.light_row: toga.Box | None = None
+        self.fan_row: toga.Box | None = None
+        self.heater_row: toga.Box | None = None
+        self.device_status: toga.Box | None = None
+        self.split: toga.SplitContainer | None = None
+        self.status_table: toga.Table | None = None
 
         setup_logging()
 
@@ -66,14 +65,22 @@ class BluetoothClient(toga.App):
 
         # 配置分栏布局
         self.split.content = [
-            (self.left_content, 1),  # type: ignore
-            (self.right_content, 2),  # type: ignore
+            (self.left_content, 1),
+            (self.right_content, 2),
         ]
 
         # 主窗口配置
         self.main_window = toga.MainWindow(title="蓝牙控制客户端")
         self.main_window.content = self.split
+        self.main_window.on_close = self.on_close
         self.main_window.show()
+
+    def on_close(self, window) -> bool:
+        if self.client:
+            self.event_loop.run_until_complete(self.client.disconnect())
+            self.client.__aexit__(None, None, None)  # 确保异步上下文清理
+            self.client = None
+        return True
 
     def _create_left_panel(self) -> None:
         """创建左侧面板内容"""
@@ -103,7 +110,7 @@ class BluetoothClient(toga.App):
         )
 
         # 添加组件到左侧面板
-        self.left_content.add(  # type: ignore
+        self.left_content.add(
             self.scan_button,
             self.device_table,
             self.connect_button,
@@ -121,18 +128,18 @@ class BluetoothClient(toga.App):
         self._create_status_table()
 
         # 添加组件到右侧面板
-        self.right_content.add(  # type: ignore
-            self.light_row,  # type: ignore
-            self.fan_row,  # type: ignore
-            self.heater_row,  # type: ignore
-            self.device_status,  # type: ignore
+        self.right_content.add(
+            self.light_row,
+            self.fan_row,
+            self.heater_row,
+            self.device_status,
         )
 
     def _create_control_panels(self) -> None:
         """创建设备控制面板"""
         # 灯光控制
         self.light_row = toga.Box(style=Pack(direction=ROW))
-        self.light_row.add(  # type: ignore
+        self.light_row.add(
             toga.Label("灯光", style=Pack(padding=(8, 5))),
             *self._create_control_buttons(
                 [1, 2, 3, 4, 5, 6], ["开", "关", "调亮", "调暗", "呼吸", "流水"]
@@ -141,14 +148,14 @@ class BluetoothClient(toga.App):
 
         # 风扇控制
         self.fan_row = toga.Box(style=Pack(direction=ROW))
-        self.fan_row.add(  # type: ignore
+        self.fan_row.add(
             toga.Label("风扇", style=Pack(padding=(7, 5))),
             *self._create_control_buttons([7, 8, 9, 10], ["开", "关", "加速", "减速"]),
         )
 
         # 电热器控制
         self.heater_row = toga.Box(style=Pack(direction=ROW))
-        self.heater_row.add(  # type: ignore
+        self.heater_row.add(
             toga.Label("电热器", style=Pack(padding=(7, 5))),
             *self._create_control_buttons(
                 [15, 16, 17, 18], ["开", "关", "升温", "降温"]
@@ -175,13 +182,11 @@ class BluetoothClient(toga.App):
             style=Pack(width=280),
         )
         self.device_status = toga.Box(style=Pack(direction=COLUMN))
-        self.device_status.add(  # type: ignore
+        self.device_status.add(
             toga.Label("设备状态", style=Pack(padding=(7, 5))), self.status_table
         )
 
-    def create_control_handler(
-        self, command_value: int
-    ) -> Callable[[toga.Widget], Coroutine]:
+    def create_control_handler(self, command_value: int):
         """生成控制按钮处理器"""
 
         async def handler(widget: toga.Widget) -> None:
@@ -245,7 +250,7 @@ class BluetoothClient(toga.App):
             target_service = self.service_uuid.replace("-", "").lower()
             target_char = self.char_uuid.replace("-", "").lower()
 
-            for service in await self.client.get_services():
+            for service in self.client.services:
                 if service.uuid.replace("-", "").lower() == target_service:
                     for char in service.characteristics:
                         if char.uuid.replace("-", "").lower() == target_char:
@@ -321,9 +326,11 @@ class BluetoothClient(toga.App):
         """断开连接"""
 
         async def start_disconnect() -> None:
-            if self.client and self.client.is_connected:
+            if self.client:
                 try:
                     await self.client.disconnect()
+                    await self.client.__aexit__(None, None, None)
+                    self.client = None
                     await self.main_window.dialog(
                         toga.InfoDialog("连接状态", "已断开连接")
                     )
