@@ -28,8 +28,8 @@ class BluetoothClient(toga.App):
     def __init__(self) -> None:
         super().__init__()
         # 蓝牙配置
-        self.service_uuid = "000000ff-0000-1000-8000-00805f9b34fb"
-        self.char_uuid = "0000ff01-0000-1000-8000-00805f9b34fb"
+        self.service_uuid:str = "000000ff-0000-1000-8000-00805f9b34fb"
+        self.char_uuid:str = "0000ff01-0000-1000-8000-00805f9b34fb"
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self.client: BleakClient | None = None
         self.target_name: str = "ESP"
