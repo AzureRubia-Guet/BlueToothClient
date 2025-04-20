@@ -5,8 +5,12 @@ BlueToothClient
 `The BeeWare Project`_. **If you want to see more tools like Briefcase, please
 consider** `becoming a financial member of BeeWare`_.
 
-only linux, because Windows cannot find esp-devices' bluetooth, and Android not have suit BLE package
+only linux, because Windows cannot find esp-devices' bluetooth, and Android not have suit python BLE package
+
+system: Ubuntu24.04LTS(if use the same system, see `this issue`_.)
+python: 3.12.9
 
 .. _`Briefcase`: https://briefcase.readthedocs.io/
 .. _`The BeeWare Project`: https://beeware.org/
 .. _`becoming a financial member of BeeWare`: https://beeware.org/contributing/membership
+.. _this issue`: https://github.com/beeware/beeware/issues/488
