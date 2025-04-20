@@ -7,7 +7,8 @@ consider** `becoming a financial member of BeeWare`_.
 
 only linux, because Windows cannot find esp-devices' bluetooth, and Android not have suit python BLE package
 
-system: Ubuntu24.04LTS(if use the same system, see `this issue`_.)
+system: Ubuntu24.04LTS(if use the same system, see `this issue`)
+
 python: 3.12.9
 
 .. _`Briefcase`: https://briefcase.readthedocs.io/
