@@ -14,4 +14,4 @@ python: 3.12.9
 .. _`Briefcase`: https://briefcase.readthedocs.io/
 .. _`The BeeWare Project`: https://beeware.org/
 .. _`becoming a financial member of BeeWare`: https://beeware.org/contributing/membership
-.. _this issue`: https://github.com/beeware/beeware/issues/488
+.. _`this issue`: https://github.com/beeware/beeware/issues/488
