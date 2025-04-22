@@ -1,7 +1,7 @@
 import asyncio
 import logging
-import re
-import sys
+from re import sub
+from sys import stdout
 
 import toga
 from bleak import BleakClient, BleakError, BleakGATTCharacteristic, BleakScanner
@@ -16,7 +16,7 @@ def setup_logging() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = logging.StreamHandler(stdout)
     console_formatter = logging.Formatter("%(message)s")
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
@@ -294,7 +294,7 @@ class BluetoothClient(toga.App):
 
     def is_esp_device(self, mac: str) -> bool:
         """验证MAC地址"""
-        cleaned = re.sub(r"[^0-9A-Fa-f]", "", mac).upper()
+        cleaned = sub(r"[^0-9A-Fa-f]", "", mac).upper()
         return cleaned[:6] in self.esp_ouis
 
     def connect_bluetooth(self, widget: toga.Widget) -> None:
