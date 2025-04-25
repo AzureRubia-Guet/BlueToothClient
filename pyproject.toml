@@ -11,7 +11,7 @@ author_email = "liangruoyv@qq.com"
 
 [tool.briefcase.app.bluetoothclient]
 formal_name = "BlueToothClient"
-description = "only linux, because Windows cannot find esp-devices' bluetooth, and android not have suit BLE package"
+description = "only Linux and Windows, because android not have suit BLE package"
 long_description = """More details about the app should go here.
 """
 icon = "icon/app_icon"

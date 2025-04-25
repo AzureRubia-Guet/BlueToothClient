@@ -1,3 +1,0 @@
-bleak==0.22.3
-toga==0.4.9
-toga_core==0.4.9
