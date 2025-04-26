@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import json
+from importlib.resources import files
 from re import sub
 from sys import stdout
 
@@ -37,15 +39,13 @@ class BluetoothClient(toga.App):
         self.event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
         # UI组件声明
+        self.device_list: list[toga.Box] = list()
         self.left_content: toga.Box | None = None
         self.right_content: toga.Box | None = None
         self.scan_button: toga.Button | None = None
         self.connect_button: toga.Button | None = None
         self.disconnect_button: toga.Button | None = None
         self.device_table: toga.Table | None = None
-        self.light_row: toga.Box | None = None
-        self.fan_row: toga.Box | None = None
-        self.heater_row: toga.Box | None = None
         self.device_status: toga.Box | None = None
         self.split: toga.SplitContainer | None = None
         self.status_table: toga.Table | None = None
@@ -128,39 +128,26 @@ class BluetoothClient(toga.App):
         self._create_status_table()
 
         # 添加组件到右侧面板
-        self.right_content.add(
-            self.light_row,
-            self.fan_row,
-            self.heater_row,
-            self.device_status,
-        )
+        self.right_content.add( *self.device_list )
+
 
     def _create_control_panels(self) -> None:
         """创建设备控制面板"""
-        # 灯光控制
-        self.light_row = toga.Box(style=Pack(direction=ROW))
-        self.light_row.add(
-            toga.Label("灯光", style=Pack(padding=(8, 5))),
-            *self._create_control_buttons(
-                [1, 2, 3, 4, 5, 6], ["开", "关", "调亮", "调暗", "呼吸", "流水"]
-            ),
-        )
 
-        # 风扇控制
-        self.fan_row = toga.Box(style=Pack(direction=ROW))
-        self.fan_row.add(
-            toga.Label("风扇", style=Pack(padding=(7, 5))),
-            *self._create_control_buttons([7, 8, 9, 10], ["开", "关", "加速", "减速"]),
-        )
+        resource_path = files("bluetoothclient.resources") / "device.json"
+        with resource_path.open(encoding='utf-8') as file:
+            device_data = json.load(file)
 
-        # 电热器控制
-        self.heater_row = toga.Box(style=Pack(direction=ROW))
-        self.heater_row.add(
-            toga.Label("电热器", style=Pack(padding=(7, 5))),
-            *self._create_control_buttons(
-                [15, 16, 17, 18], ["开", "关", "升温", "降温"]
-            ),
-        )
+        for device in device_data:
+            self.device_list.append(toga.Box(style=Pack(direction=ROW)))
+            self.device_list[-1].add(
+                toga.Label(device["device_name"], style=Pack(padding=(8, 5))), 
+                *self._create_control_buttons(
+                    [button["command"] for button in device["buttons"]],  
+                    [button["option"] for button in device["buttons"]]  
+                )
+            )
+
 
     def _create_control_buttons(
         self, commands: list[int], labels: list[str]
