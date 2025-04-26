@@ -1,0 +1,73 @@
+[
+    {
+        "device_name": "灯光",
+        "buttons":[
+            {
+                "option": "开",
+                "command": 1
+            },
+            {
+                "option": "关",
+                "command": 2
+            },
+            {
+                "option": "调亮",
+                "command": 3
+            },
+            {
+                "option": "调暗",
+                "command": 4
+            },
+            {
+                "option": "呼吸",
+                "command": 5
+            },
+            {
+                "option": "流水",
+                "command": 6
+            }
+        ]
+    },
+    {
+        "device_name": "风扇",
+        "buttons":[
+            {
+                "option": "开",
+                "command": 7
+            },
+            {
+                "option": "关",
+                "command": 8
+            },
+            {
+                "option": "加速",
+                "command": 9
+            },
+            {
+                "option": "减速",
+                "command": 10
+            }
+        ]
+    },
+    {
+        "device_name": "电热器",
+        "buttons":[
+            {
+                "option": "开",
+                "command": 15
+            },
+            {
+                "option": "关",
+                "command": 16
+            },
+            {
+                "option": "升温",
+                "command": 17
+            },
+            {
+                "option": "降温",
+                "command": 18
+            }
+        ]
+    }
+]
