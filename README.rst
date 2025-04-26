@@ -5,9 +5,9 @@ BlueToothClient
 `The BeeWare Project`_. **If you want to see more tools like Briefcase, please
 consider** `becoming a financial member of BeeWare`_.
 
-only Linux and Windows, because Android not have suit python BLE package
+only Linux and Windows, because Android not have suit python BLE package(see `beeware issue 181`_). 
 
-system: Ubuntu24.04LTS(if use the same system, see `this issue`_) Windows11(24H2)
+system: Ubuntu24.04LTS(if use the same system, see `beeware issue 488`_) Windows11(24H2)
 packages: briefcase bleak
 
 python: 3.12.9
@@ -15,4 +15,5 @@ python: 3.12.9
 .. _`Briefcase`: https://briefcase.readthedocs.io/
 .. _`The BeeWare Project`: https://beeware.org/
 .. _`becoming a financial member of BeeWare`: https://beeware.org/contributing/membership
-.. _`this issue`: https://github.com/beeware/beeware/issues/488
+.. _`beeware issue 181`: https://github.com/beeware/beeware/issues/181
+.. _`beeware issue 488`: https://github.com/beeware/beeware/issues/488
