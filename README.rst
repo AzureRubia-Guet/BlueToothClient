@@ -7,8 +7,8 @@ consider** `becoming a financial member of BeeWare`_.
 
 only Linux and Windows, because Android not have suit python BLE package(see `beeware issue 181`_). 
 
-system: Ubuntu24.04LTS(if use the same system, see `beeware issue 488`_) Windows11(24H2)
-packages: briefcase bleak
+system: Ubuntu24.04LTS(if use the same system, see `beeware issue 488`_), Windows11(24H2).
+packages: briefcase, bleak.
 
 python: 3.12.9
 
