@@ -29,9 +29,12 @@ class BluetoothClient(toga.App):
     def __init__(self) -> None:
         super().__init__()
         # 蓝牙配置
-        self.service_uuid: str = "000000ff-0000-1000-8000-00805f9b34fb"
-        self.char_uuid: str = "0000ff01-0000-1000-8000-00805f9b34fb"
-        self.target_name: str = "ESP"
+        resource_path = files("bluetoothclient.resources") / "bluetooth.json"
+        with resource_path.open(encoding='utf-8') as file:
+            bluetooth_data = json.load(file)
+        self.service_uuid: str = bluetooth_data["bluetooth_info"]["service_uuid"]
+        self.char_uuid: str = bluetooth_data["bluetooth_info"]["char_uuid"]
+        self.target_name: str = bluetooth_data["bluetooth_info"]["target_name"]
         self.esp_ouis: set[str] = esp_ouis
         self.bluetooth_manager = BluetoothManager(self.service_uuid, self.char_uuid, self.target_name, self.esp_ouis)
         self.event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
@@ -124,6 +127,7 @@ class BluetoothClient(toga.App):
 
         # 添加组件到右侧面板
         self.right_content.add(*self.device_list)
+        self.right_content.add(self.device_status)
 
     def _create_control_panels(self) -> None:
         """创建设备控制面板"""
