@@ -2,15 +2,14 @@ import asyncio
 import logging
 import json
 from importlib.resources import files
-from re import sub
 from sys import stdout
 
 import toga
-from bleak import BleakClient, BleakError, BleakGATTCharacteristic, BleakScanner
 from toga.style import Pack
 from toga.style.pack import COLUMN, ROW
 
 from bluetoothclient.resources.esp_ouis import ouis as esp_ouis
+from bluetoothclient.bluetooth_manager import BluetoothManager
 
 
 def setup_logging() -> None:
@@ -30,12 +29,11 @@ class BluetoothClient(toga.App):
     def __init__(self) -> None:
         super().__init__()
         # 蓝牙配置
-        self.service_uuid:str = "000000ff-0000-1000-8000-00805f9b34fb"
-        self.char_uuid:str = "0000ff01-0000-1000-8000-00805f9b34fb"
-        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
-        self.client: BleakClient | None = None
+        self.service_uuid: str = "000000ff-0000-1000-8000-00805f9b34fb"
+        self.char_uuid: str = "0000ff01-0000-1000-8000-00805f9b34fb"
         self.target_name: str = "ESP"
         self.esp_ouis: set[str] = esp_ouis
+        self.bluetooth_manager = BluetoothManager(self.service_uuid, self.char_uuid, self.target_name, self.esp_ouis)
         self.event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
         # UI组件声明
@@ -76,10 +74,7 @@ class BluetoothClient(toga.App):
         self.main_window.show()
 
     def on_close(self, window) -> bool:
-        if self.client:
-            self.event_loop.run_until_complete(self.client.disconnect())
-            self.client.__aexit__(None, None, None)  # 确保异步上下文清理
-            self.client = None
+        self.event_loop.create_task(self.bluetooth_manager.disconnect())
         return True
 
     def _create_left_panel(self) -> None:
@@ -128,8 +123,7 @@ class BluetoothClient(toga.App):
         self._create_status_table()
 
         # 添加组件到右侧面板
-        self.right_content.add( *self.device_list )
-
+        self.right_content.add(*self.device_list)
 
     def _create_control_panels(self) -> None:
         """创建设备控制面板"""
@@ -141,16 +135,15 @@ class BluetoothClient(toga.App):
         for device in device_data:
             self.device_list.append(toga.Box(style=Pack(direction=ROW)))
             self.device_list[-1].add(
-                toga.Label(device["device_name"], style=Pack(padding=(8, 5))), 
+                toga.Label(device["device_name"], style=Pack(padding=(8, 5))),
                 *self._create_control_buttons(
-                    [button["command"] for button in device["buttons"]],  
-                    [button["option"] for button in device["buttons"]]  
+                    [button["command"] for button in device["buttons"]],
+                    [button["option"] for button in device["buttons"]]
                 )
             )
 
-
     def _create_control_buttons(
-        self, commands: list[int], labels: list[str]
+            self, commands: list[int], labels: list[str]
     ) -> list[toga.Button]:
         """创建控制按钮组"""
         return [
@@ -177,112 +170,28 @@ class BluetoothClient(toga.App):
         """生成控制按钮处理器"""
 
         async def handler(widget: toga.Widget) -> None:
-            self.logger.info(f"发送控制命令: {command_value}")
-            await self.send_command(command_value)
+            if await self.bluetooth_manager.send_command(command_value):
+                self.logger.info(f"发送控制命令: {command_value} 成功")
+            else:
+                await self.main_window.dialog(toga.ErrorDialog("错误", "设备未连接或发送失败"))
 
         return handler
-
-    async def send_command(self, value: int) -> bool:
-        """发送指令到设备"""
-        if not self.client or not self.client.is_connected:
-            await self.main_window.dialog(toga.ErrorDialog("错误", "设备未连接"))
-            return False
-
-        try:
-            await self.client.write_gatt_char(self.char_uuid, bytes([value]))
-            self.logger.info(f"成功发送指令: {value}")
-            return True
-        except BleakError as e:
-            self.logger.error(f"发送失败: {str(e)}")
-            await self.main_window.dialog(toga.ErrorDialog("错误", f"发送失败: {e}"))
-            return False
 
     def scan_bluetooth(self, widget: toga.Widget) -> None:
         """执行蓝牙扫描"""
 
         async def start_scan() -> None:
-            self.logger.info("开始扫描蓝牙设备...")
-            try:
-                devices = await BleakScanner.discover()
-                matched = [
-                    {"name": d.name, "mac": d.address}
-                    for d in devices
-                    if d.name
-                    and (self.target_name in d.name or self.is_esp_device(d.address))
-                ]
+            matched = await self.bluetooth_manager.scan_devices()
 
-                if self.device_table:
-                    self.device_table.data = matched
+            if self.device_table:
+                self.device_table.data = matched
 
-                if not matched:
-                    await self.main_window.dialog(
-                        toga.InfoDialog("提示", "未找到目标设备")
-                    )
-
-            except BleakError as e:
-                self.logger.error(f"扫描失败: {str(e)}")
+            if not matched:
                 await self.main_window.dialog(
-                    toga.ErrorDialog("错误", f"扫描失败: {e}")
+                    toga.InfoDialog("提示", "未找到目标设备")
                 )
 
         self.event_loop.create_task(start_scan())
-
-    async def connect_to_device(self, address: str) -> bool:
-        """连接指定设备"""
-        try:
-            self.client = BleakClient(address)
-            await self.client.connect()
-
-            # 验证服务
-            target_service = self.service_uuid.replace("-", "").lower()
-            target_char = self.char_uuid.replace("-", "").lower()
-
-            for service in self.client.services:
-                if service.uuid.replace("-", "").lower() == target_service:
-                    for char in service.characteristics:
-                        if char.uuid.replace("-", "").lower() == target_char:
-                            await self.client.start_notify(
-                                char.uuid, self.notification_handler
-                            )
-                            return True
-            return False
-        except BleakError as e:
-            self.logger.error(f"连接失败: {str(e)}")
-            return False
-
-    def notification_handler(self, _: BleakGATTCharacteristic, data: bytearray) -> None:
-        """处理设备通知"""
-        if len(data) == 3:
-            status = {
-                "light": self._parse_status(data[0], "light"),
-                "fan": self._parse_status(data[1], "fan"),
-                "heater": self._parse_status(data[2], "heater"),
-            }
-            self.event_loop.call_soon_threadsafe(
-                self._update_status, status["light"], status["fan"], status["heater"]
-            )
-
-    def _parse_status(self, value: int, device: str) -> str:
-        """解析状态数值"""
-        mapping = {
-            "light": {1: "低亮", 2: "关闭", 3: "中亮", 4: "高亮", 5: "呼吸", 6: "流水"},
-            "fan": {7: "低速", 8: "关闭", 9: "中速", 10: "高速"},
-            "heater": {15: "低温", 16: "关闭", 17: "中温", 18: "高温"},
-        }
-        return mapping.get(device, {}).get(value, "未知")
-
-    def _update_status(self, light: str, fan: str, heater: str) -> None:
-        """更新状态显示"""
-        if self.status_table:
-            self.status_table.data.clear()
-            self.status_table.data.append(
-                {"light": light, "fan": fan, "heater": heater}
-            )
-
-    def is_esp_device(self, mac: str) -> bool:
-        """验证MAC地址"""
-        cleaned = sub(r"[^0-9A-Fa-f]", "", mac).upper()
-        return cleaned[:6] in self.esp_ouis
 
     def connect_bluetooth(self, widget: toga.Widget) -> None:
         """连接设备"""
@@ -295,17 +204,12 @@ class BluetoothClient(toga.App):
                 return
 
             address = self.device_table.selection.mac
-            try:
-                if await self.connect_to_device(address):
-                    await self.main_window.dialog(
-                        toga.InfoDialog("连接状态", "连接成功")
-                    )
-                else:
-                    await self.main_window.dialog(toga.ErrorDialog("错误", "连接失败"))
-            except Exception as e:
+            if await self.bluetooth_manager.connect_to_device(address):
                 await self.main_window.dialog(
-                    toga.ErrorDialog("错误", f"连接异常: {str(e)}")
+                    toga.InfoDialog("连接状态", "连接成功")
                 )
+            else:
+                await self.main_window.dialog(toga.ErrorDialog("错误", "连接失败"))
 
         self.event_loop.create_task(start_connect())
 
@@ -313,25 +217,25 @@ class BluetoothClient(toga.App):
         """断开连接"""
 
         async def start_disconnect() -> None:
-            if self.client:
-                try:
-                    await self.client.disconnect()
-                    await self.client.__aexit__(None, None, None)
-                    self.client = None
-                    await self.main_window.dialog(
-                        toga.InfoDialog("连接状态", "已断开连接")
-                    )
-                    self._update_status("-", "-", "-")
-                except BleakError as e:
-                    await self.main_window.dialog(
-                        toga.ErrorDialog("错误", f"断开失败: {e}")
-                    )
+            if await self.bluetooth_manager.disconnect():
+                await self.main_window.dialog(
+                    toga.InfoDialog("连接状态", "已断开连接")
+                )
+                self._update_status("-", "-", "-")
             else:
                 await self.main_window.dialog(
-                    toga.InfoDialog("提示", "当前没有已连接的设备")
+                    toga.ErrorDialog("错误", "断开失败")
                 )
 
         self.event_loop.create_task(start_disconnect())
+
+    def _update_status(self, light: str, fan: str, heater: str) -> None:
+        """更新状态显示"""
+        if self.status_table:
+            self.status_table.data.clear()
+            self.status_table.data.append(
+                {"light": light, "fan": fan, "heater": heater}
+            )
 
 
 def main() -> BluetoothClient:
