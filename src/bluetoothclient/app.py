@@ -30,13 +30,15 @@ class BluetoothClient(toga.App):
         super().__init__()
         # 蓝牙配置
         resource_path = files("bluetoothclient.resources") / "bluetooth.json"
-        with resource_path.open(encoding='utf-8') as file:
+        with resource_path.open(encoding="utf-8") as file:
             bluetooth_data = json.load(file)
         self.service_uuid: str = bluetooth_data["bluetooth_info"]["service_uuid"]
         self.char_uuid: str = bluetooth_data["bluetooth_info"]["char_uuid"]
         self.target_name: str = bluetooth_data["bluetooth_info"]["target_name"]
         self.esp_ouis: set[str] = esp_ouis
-        self.bluetooth_manager = BluetoothManager(self.service_uuid, self.char_uuid, self.target_name, self.esp_ouis)
+        self.bluetooth_manager = BluetoothManager(
+            self.service_uuid, self.char_uuid, self.target_name, self.esp_ouis
+        )
         self.event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
         # UI组件声明
@@ -126,14 +128,14 @@ class BluetoothClient(toga.App):
         self._create_status_table()
 
         # 添加组件到右侧面板
-        self.right_content.add(*self.device_list)
-        self.right_content.add(self.device_status)
+        self.right_content.add(*self.device_list, self.device_status)
+
 
     def _create_control_panels(self) -> None:
         """创建设备控制面板"""
 
         resource_path = files("bluetoothclient.resources") / "device.json"
-        with resource_path.open(encoding='utf-8') as file:
+        with resource_path.open(encoding="utf-8") as file:
             device_data = json.load(file)
 
         for device in device_data:
@@ -142,12 +144,12 @@ class BluetoothClient(toga.App):
                 toga.Label(device["device_name"], style=Pack(padding=(8, 5))),
                 *self._create_control_buttons(
                     [button["command"] for button in device["buttons"]],
-                    [button["option"] for button in device["buttons"]]
-                )
+                    [button["option"] for button in device["buttons"]],
+                ),
             )
 
     def _create_control_buttons(
-            self, commands: list[int], labels: list[str]
+        self, commands: list[int], labels: list[str]
     ) -> list[toga.Button]:
         """创建控制按钮组"""
         return [
@@ -177,7 +179,9 @@ class BluetoothClient(toga.App):
             if await self.bluetooth_manager.send_command(command_value):
                 self.logger.info(f"发送控制命令: {command_value} 成功")
             else:
-                await self.main_window.dialog(toga.ErrorDialog("错误", "设备未连接或发送失败"))
+                await self.main_window.dialog(
+                    toga.ErrorDialog("错误", "设备未连接或发送失败")
+                )
 
         return handler
 
@@ -191,9 +195,7 @@ class BluetoothClient(toga.App):
                 self.device_table.data = matched
 
             if not matched:
-                await self.main_window.dialog(
-                    toga.InfoDialog("提示", "未找到目标设备")
-                )
+                await self.main_window.dialog(toga.InfoDialog("提示", "未找到目标设备"))
 
         self.event_loop.create_task(start_scan())
 
@@ -209,9 +211,7 @@ class BluetoothClient(toga.App):
 
             address = self.device_table.selection.mac
             if await self.bluetooth_manager.connect_to_device(address):
-                await self.main_window.dialog(
-                    toga.InfoDialog("连接状态", "连接成功")
-                )
+                await self.main_window.dialog(toga.InfoDialog("连接状态", "连接成功"))
             else:
                 await self.main_window.dialog(toga.ErrorDialog("错误", "连接失败"))
 
@@ -222,14 +222,10 @@ class BluetoothClient(toga.App):
 
         async def start_disconnect() -> None:
             if await self.bluetooth_manager.disconnect():
-                await self.main_window.dialog(
-                    toga.InfoDialog("连接状态", "已断开连接")
-                )
+                await self.main_window.dialog(toga.InfoDialog("连接状态", "已断开连接"))
                 self._update_status("-", "-", "-")
             else:
-                await self.main_window.dialog(
-                    toga.ErrorDialog("错误", "断开失败")
-                )
+                await self.main_window.dialog(toga.ErrorDialog("错误", "断开失败"))
 
         self.event_loop.create_task(start_disconnect())
 
