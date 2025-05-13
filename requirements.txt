@@ -1,4 +1,3 @@
-# please run 'pip install briefcase bleak'， this project not relay special version
-bleak==0.22.3
-toga==0.4.9
-toga_core==0.4.9
+# this project not relay special version
+bleak
+briefcase
