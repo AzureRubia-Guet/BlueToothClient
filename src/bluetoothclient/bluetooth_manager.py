@@ -79,25 +79,13 @@ class BluetoothManager:
             return status
 
     def _parse_status(self, value: int, device: str) -> str:
-        resource_path = files("bluetoothclient.resources") / "device.json"
-        with resource_path.open(encoding='utf-8') as file:
-            device_data = json.load(file)
-
-        # 构建 mapping
-        mapping = {}
-        for item in device_data:
-            device_name = item["device_name"]
-            mapping[device_name.lower()] = {button["command"]: button["option"] for button in item["buttons"]}
-
-        # 修正 device 名称映射
-        device_mapping = {
-            "light": "灯光",
-            "fan": "风扇",
-            "heater": "电热器"
+        """解析状态数值"""
+        mapping = {
+            "light": {1: "低亮", 2: "关闭", 3: "中亮", 4: "高亮", 5: "呼吸", 6: "流水"},
+            "fan": {7: "低速", 8: "关闭", 9: "中速", 10: "高速"},
+            "heater": {15: "低温", 16: "关闭", 17: "中温", 18: "高温"},
         }
-        proper_device_name = device_mapping.get(device, device)
-
-        return mapping.get(proper_device_name, {}).get(value, "未知")
+        return mapping.get(device, {}).get(value, "未知")
 
     def is_esp_device(self, mac: str) -> bool:
         cleaned = sub(r"[^0-9A-Fa-f]", "", mac).upper()
