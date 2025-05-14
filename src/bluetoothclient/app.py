@@ -37,7 +37,7 @@ class BluetoothClient(toga.App):
         self.target_name: str = bluetooth_data["bluetooth_info"]["target_name"]
         self.esp_ouis: set[str] = esp_ouis
         self.bluetooth_manager = BluetoothManager(
-            self.service_uuid, self.char_uuid, self.target_name, self.esp_ouis
+            self.service_uuid, self.char_uuid, self.target_name, self.esp_ouis, self.update_status_callback
         )
         self.event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
@@ -52,7 +52,8 @@ class BluetoothClient(toga.App):
         self.device_status: toga.Box | None = None
         self.split: toga.SplitContainer | None = None
         self.status_table: toga.Table | None = None
-
+        
+        self.logger = logging.getLogger(self.__class__.__name__)      
         setup_logging()
 
     def startup(self) -> None:
@@ -129,7 +130,6 @@ class BluetoothClient(toga.App):
 
         # 添加组件到右侧面板
         self.right_content.add(*self.device_list, self.device_status)
-
 
     def _create_control_panels(self) -> None:
         """创建设备控制面板"""
@@ -236,6 +236,9 @@ class BluetoothClient(toga.App):
             self.status_table.data.append(
                 {"light": light, "fan": fan, "heater": heater}
             )
+
+    def update_status_callback(self, status):
+        self._update_status(status["light"], status["fan"], status["heater"])
 
 
 def main() -> BluetoothClient:

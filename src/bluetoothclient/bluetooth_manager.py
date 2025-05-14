@@ -7,7 +7,7 @@ from re import sub
 
 
 class BluetoothManager:
-    def __init__(self, service_uuid, char_uuid, target_name, esp_ouis):
+    def __init__(self, service_uuid, char_uuid, target_name, esp_ouis, status_callback=None):
         super().__init__()
         self.service_uuid = service_uuid
         self.char_uuid = char_uuid
@@ -16,6 +16,7 @@ class BluetoothManager:
         self.target_name = target_name
         self.esp_ouis = esp_ouis
         self.event_loop = asyncio.get_event_loop()
+        self.status_callback = status_callback
 
     async def scan_devices(self):
         self.logger.info("开始扫描蓝牙设备...")
@@ -73,6 +74,8 @@ class BluetoothManager:
                 "fan": self._parse_status(data[1], "fan"),
                 "heater": self._parse_status(data[2], "heater"),
             }
+            if self.status_callback:
+                self.status_callback(status)
             return status
 
     def _parse_status(self, value: int, device: str) -> str:
